@@ -39,7 +39,6 @@ def helper():
     return train_data, train_labels, validation_data, validation_labels, test_data, test_labels
 
 
-
 def SGD_hinge(data, labels, C, eta_0, T):
     """
     Implements SGD for hinge loss.
