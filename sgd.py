@@ -67,33 +67,54 @@ def SGD_log(data, labels, eta_0, T):
 # Place for additional code
 def run_hinge_experiment():
     tr_data, tr_labels, v_data, v_labels, test_data, test_labels = helper()
-    eta_range = np.logspace()
+    eta_range = np.logspace(-5, 5, 11)
     eta_0 = find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, 1, 1000)
     print("Best η_0:", eta_0)
-    C_range = np.logspace()
+    C_range = np.logspace(-5, 5, 11)
     C = find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, 1000)
     print("Best C:", C)
     display_classifier(tr_data, tr_labels, C, eta_0, 20000)
 
 def find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, C, T):
-
-    return 1
+    error_rates = [0] * 10
+    for i in range(eta_range.size):
+        for j in range(10):
+            classifier = SGD_hinge(tr_data, tr_labels, C, eta_range[i], T)
+            error_rates[i] += cross_validate(classifier, v_data, v_labels) / 10
+    accuracies = np.array([1 - error for error in error_rates])
+    title = '$Average Accuracy on Validation Data as a Function of η_{0}$'
+    graph(title, eta_range, accuracies, '$η_{0}$', "Accuracy")
+    return eta_range[np.argmin(error_rates)]
 
 def find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, T):
-
-    return 1
+    error_rates = [0] * 10
+    for i in range(C_range.size):
+        for j in range(10):
+            classifier = SGD_hinge(tr_data, tr_labels, C_range[i], eta_0, T)
+            error_rates[i] += cross_validate(classifier, v_data, v_labels) / 10
+    accuracies = np.array([1 - error for error in error_rates])
+    title = '$Average Accuracy on Validation Data as a Function of C$'
+    graph(title, C_range, accuracies, "C", "Accuracy")
+    return C_range[np.argmin(error_rates)]
 
 def display_classifier(data, labels, C, eta_0, T):
     w = SGD_hinge(data, labels, C, eta_0, T)
     plt.imshow(np.reshape(w, (28, 28)), interpolation='nearest')
 
+
+def graph(title, xData, yData, xLabel, yLabels):
+    plt.xlabel(xLabel)
+    plt.plot(xData, yData, label=yLabels, color="red")
+    plt.title(title)
+    plt.show()
+
 def cross_validate(classifier, v_data, v_labels):
-    accuracy = 0
+    error_rate = 0
     n = v_data.shape[0]
     for index in range(n):
         x_i, y_i = v_data[index], v_labels[index]
-        accuracy += is_misprediction(classifier, x_i, y_i) / n
-    return accuracy
+        error_rate += is_misprediction(classifier, x_i, y_i) / n
+    return error_rate
 
 def update_hinge_classifier(classifier, x_i, y_i, eta_t, C):
     classifier *= (1 - eta_t)  # this happens regardless of correctness of prediction
@@ -109,5 +130,8 @@ def is_misprediction(classifier, datapoint, label):
 
 def sign(x):
     return 1 if x >= 0 else -1
+
+
+run_hinge_experiment()
 
 #################################
