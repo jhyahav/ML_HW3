@@ -67,44 +67,51 @@ def SGD_log(data, labels, eta_0, T):
 # Place for additional code
 def run_hinge_experiment():
     tr_data, tr_labels, v_data, v_labels, test_data, test_labels = helper()
-    eta_range = np.logspace(-5, 5, 11)
+    eta_range = np.logspace(-1, 1, 11)
     eta_0 = find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, 1, 1000)
     print("Best η_0:", eta_0)
-    C_range = np.logspace(-5, 5, 11)
+    C_range = np.logspace(-6, 2, 11)
     C = find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, 1000)
     print("Best C:", C)
-    display_classifier(tr_data, tr_labels, C, eta_0, 20000)
+    display_classifier(tr_data, tr_labels, C, eta_0, 20000, test_data, test_labels)
 
 def find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, C, T):
-    error_rates = [0] * 10
+    error_rates = [0] * eta_range.size
     for i in range(eta_range.size):
         for j in range(10):
             classifier = SGD_hinge(tr_data, tr_labels, C, eta_range[i], T)
             error_rates[i] += cross_validate(classifier, v_data, v_labels) / 10
     accuracies = np.array([1 - error for error in error_rates])
-    title = '$Average Accuracy on Validation Data as a Function of η_{0}$'
+    title = 'Average Accuracy on Validation Data as a Function of $η_{0}$'
     graph(title, eta_range, accuracies, '$η_{0}$', "Accuracy")
     return eta_range[np.argmin(error_rates)]
 
 def find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, T):
-    error_rates = [0] * 10
+    error_rates = [0] * C_range.size
     for i in range(C_range.size):
         for j in range(10):
             classifier = SGD_hinge(tr_data, tr_labels, C_range[i], eta_0, T)
             error_rates[i] += cross_validate(classifier, v_data, v_labels) / 10
     accuracies = np.array([1 - error for error in error_rates])
-    title = '$Average Accuracy on Validation Data as a Function of C$'
-    graph(title, C_range, accuracies, "C", "Accuracy")
+    title = 'Average Accuracy on Validation Data as a Function of $C$'
+    graph(title, C_range, accuracies, '$C$', "Accuracy")
     return C_range[np.argmin(error_rates)]
 
-def display_classifier(data, labels, C, eta_0, T):
-    w = SGD_hinge(data, labels, C, eta_0, T)
+def display_classifier(tr_data, tr_labels, C, eta_0, T, test_data, test_labels):
+    w = SGD_hinge(tr_data, tr_labels, C, eta_0, T)
+    error = 1 - cross_validate(w, test_data, test_labels)
+    print("Error of best classifier:", error)
+    plt.gray()
     plt.imshow(np.reshape(w, (28, 28)), interpolation='nearest')
+    plt.colorbar()
+    plt.show()
 
 
-def graph(title, xData, yData, xLabel, yLabels):
+def graph(title, xData, yData, xLabel, yLabel):
+    plt.xscale("log")
     plt.xlabel(xLabel)
-    plt.plot(xData, yData, label=yLabels, color="red")
+    plt.ylabel(yLabel)
+    plt.plot(xData, yData, color="red")
     plt.title(title)
     plt.show()
 
