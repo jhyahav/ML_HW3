@@ -7,6 +7,8 @@ import numpy as np
 import numpy.random
 from sklearn.datasets import fetch_openml
 import sklearn.preprocessing
+import matplotlib.pyplot as plt
+from scipy.special import softmax
 
 """
 Please use the provided function signature for the SGD implementation.
@@ -43,8 +45,14 @@ def SGD_hinge(data, labels, C, eta_0, T):
     """
     Implements SGD for hinge loss.
     """
-    # TODO: Implement me
-    pass
+    classifier = np.zeros(data.shape[1])
+    for t in range(1, T+1):
+        index = np.random.randint(1, data.shape[0])
+        x_i, y_i = data[index], labels[index]
+        eta_t = eta_0 / t
+        classifier = update_hinge_classifier(classifier, x_i, y_i, eta_t, C)
+    return classifier
+
 
 
 def SGD_log(data, labels, eta_0, T):
@@ -57,5 +65,49 @@ def SGD_log(data, labels, eta_0, T):
 #################################
 
 # Place for additional code
+def run_hinge_experiment():
+    tr_data, tr_labels, v_data, v_labels, test_data, test_labels = helper()
+    eta_range = np.logspace()
+    eta_0 = find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, 1, 1000)
+    print("Best η_0:", eta_0)
+    C_range = np.logspace()
+    C = find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, 1000)
+    print("Best C:", C)
+    display_classifier(tr_data, tr_labels, C, eta_0, 20000)
+
+def find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, C, T):
+
+    return 1
+
+def find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, T):
+
+    return 1
+
+def display_classifier(data, labels, C, eta_0, T):
+    w = SGD_hinge(data, labels, C, eta_0, T)
+    plt.imshow(np.reshape(w, (28, 28)), interpolation='nearest')
+
+def cross_validate(classifier, v_data, v_labels):
+    accuracy = 0
+    n = v_data.shape[0]
+    for index in range(n):
+        x_i, y_i = v_data[index], v_labels[index]
+        accuracy += is_misprediction(classifier, x_i, y_i) / n
+    return accuracy
+
+def update_hinge_classifier(classifier, x_i, y_i, eta_t, C):
+    classifier *= (1 - eta_t)  # this happens regardless of correctness of prediction
+    classifier += is_hinge_miss(classifier, x_i, y_i) * eta_t * C * y_i * x_i
+    return classifier
+
+def is_hinge_miss(classifier, x_i, y_i):
+    return y_i * np.dot(classifier, x_i) < 1
+
+def is_misprediction(classifier, datapoint, label):
+    predicted_label = sign(np.dot(classifier, datapoint))
+    return label != predicted_label
+
+def sign(x):
+    return 1 if x >= 0 else -1
 
 #################################
