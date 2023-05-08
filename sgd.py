@@ -48,12 +48,11 @@ def SGD_hinge(data, labels, C, eta_0, T):
     return SGD(data, labels, C, eta_0, T, update_hinge_classifier)
 
 
-
 def SGD_log(data, labels, C, eta_0, T, norm_mode=False):
     """
     Implements SGD for log loss.
     """
-    return SGD(data, labels, None, eta_0, T, update_log_classifier)
+    return SGD(data, labels, None, eta_0, T, update_log_classifier, norm_mode)
 
 #################################
 
@@ -102,20 +101,21 @@ def find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, T):
 
 def plot_norm(tr_data, tr_labels, eta_0, T):
     norm = SGD_log(tr_data, tr_labels, None, eta_0, T, norm_mode=True)
-    title = "Norm of Classifier $w$ as a Function of SGD Iteration Number"
-    graph(title, np.arange(0, T + 1), norm, "Iteration", "Norm of Classifier $w$")
+    title = "$‖w‖$ as a Function of SGD Iteration Number"
+    graph(title, np.arange(0, T), norm, "Iteration", "$‖w‖$", logScale=False)
 
 def display_classifier(tr_data, tr_labels, C, eta_0, T, test_data, test_labels, SGD_variant):
     w = SGD_variant(tr_data, tr_labels, C, eta_0, T)
-    error = 1 - cross_validate(w, test_data, test_labels)
-    print("Error of best classifier:", error)
+    accuracy = 1 - cross_validate(w, test_data, test_labels)
+    print("Accuracy of best classifier:", accuracy)
     plt.gray()
     plt.imshow(np.reshape(w, (28, 28)), interpolation='nearest')
     plt.colorbar()
     plt.show()
 
-def graph(title, xData, yData, xLabel, yLabel):
-    plt.xscale("log")
+def graph(title, xData, yData, xLabel, yLabel, logScale=True):
+    if logScale:
+        plt.xscale("log")
     plt.xlabel(xLabel)
     plt.ylabel(yLabel)
     plt.plot(xData, yData, color="red")
@@ -132,17 +132,16 @@ def cross_validate(classifier, v_data, v_labels):
 
 def SGD(data, labels, C, eta_0, T, update_function, norm_mode=False):
     classifier = np.zeros(data.shape[1], dtype='float64')
-    norm = 0 # np.zeros(T, dtype='float64') # TODO: implement updates
+    norms = np.zeros(T, dtype='float64')
     for t in range(1, T+1):
         index = np.random.randint(1, data.shape[0])
         x_i, y_i = data[index], labels[index]
         eta_t = eta_0 / t
         classifier = update_function(classifier, x_i, y_i, eta_t, C)
-    return classifier if not norm_mode else norm
+        norms[t - 1] = np.linalg.norm(classifier)
+    return classifier if not norm_mode else norms
 
 def update_hinge_classifier(classifier, x_i, y_i, eta_t, C):
-    print(classifier)
-    print(x_i)
     classifier *= (1 - eta_t)  # this happens regardless of correctness of prediction
     classifier += is_hinge_miss(classifier, x_i, y_i) * eta_t * C * y_i * x_i
     return classifier
@@ -162,7 +161,7 @@ def sign(x):
     return 1 if x >= 0 else -1
 
 
-# run_experiment(HINGE)
+run_experiment(HINGE)
 run_experiment(LOG)
 
 #################################
