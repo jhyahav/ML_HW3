@@ -45,13 +45,7 @@ def SGD_hinge(data, labels, C, eta_0, T):
     """
     Implements SGD for hinge loss.
     """
-    classifier = np.zeros(data.shape[1])
-    for t in range(1, T+1):
-        index = np.random.randint(1, data.shape[0])
-        x_i, y_i = data[index], labels[index]
-        eta_t = eta_0 / t
-        classifier = update_hinge_classifier(classifier, x_i, y_i, eta_t, C)
-    return classifier
+    return SGD(data, labels, C, eta_0, T, update_hinge_classifier)
 
 
 
@@ -59,27 +53,34 @@ def SGD_log(data, labels, eta_0, T):
     """
     Implements SGD for log loss.
     """
-    # TODO: Implement me
-    pass
+    return SGD(data, labels, None, eta_0, T, update_log_classifier)
 
 #################################
 
 # Place for additional code
-def run_hinge_experiment():
-    tr_data, tr_labels, v_data, v_labels, test_data, test_labels = helper()
-    eta_range = np.logspace(-1, 1, 11)
-    eta_0 = find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, 1, 1000)
-    print("Best η_0:", eta_0)
-    C_range = np.logspace(-6, 2, 11)
-    C = find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, 1000)
-    print("Best C:", C)
-    display_classifier(tr_data, tr_labels, C, eta_0, 20000, test_data, test_labels)
 
-def find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, C, T):
+
+HINGE = True
+LOG = False
+def run_experiment(flag):
+    SGD_variant = SGD_hinge if flag == HINGE else SGD_log
+    tr_data, tr_labels, v_data, v_labels, test_data, test_labels = helper()
+    eta_range = np.logspace(-5, 5, 11)
+    eta_0 = find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, 1, 1000, SGD_variant)
+    print("Best η_0:", eta_0)
+    if flag == HINGE:
+        C_range = np.logspace(-6, 2, 11)
+        C = find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, 1000)
+        print("Best C:", C)
+    else:
+        C = None
+    display_classifier(tr_data, tr_labels, C, eta_0, 20000, test_data, test_labels, SGD_variant)
+
+def find_best_eta_0(eta_range, tr_data, tr_labels, v_data, v_labels, C, T, SGD_variant):
     error_rates = [0] * eta_range.size
     for i in range(eta_range.size):
         for j in range(10):
-            classifier = SGD_hinge(tr_data, tr_labels, C, eta_range[i], T)
+            classifier = SGD_variant(tr_data, tr_labels, C, eta_range[i], T)
             error_rates[i] += cross_validate(classifier, v_data, v_labels) / 10
     accuracies = np.array([1 - error for error in error_rates])
     title = 'Average Accuracy on Validation Data as a Function of $η_{0}$'
@@ -97,15 +98,14 @@ def find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, T):
     graph(title, C_range, accuracies, '$C$', "Accuracy")
     return C_range[np.argmin(error_rates)]
 
-def display_classifier(tr_data, tr_labels, C, eta_0, T, test_data, test_labels):
-    w = SGD_hinge(tr_data, tr_labels, C, eta_0, T)
+def display_classifier(tr_data, tr_labels, C, eta_0, T, test_data, test_labels, SGD_variant):
+    w = SGD_variant(tr_data, tr_labels, C, eta_0, T)
     error = 1 - cross_validate(w, test_data, test_labels)
     print("Error of best classifier:", error)
     plt.gray()
     plt.imshow(np.reshape(w, (28, 28)), interpolation='nearest')
     plt.colorbar()
     plt.show()
-
 
 def graph(title, xData, yData, xLabel, yLabel):
     plt.xscale("log")
@@ -123,10 +123,22 @@ def cross_validate(classifier, v_data, v_labels):
         error_rate += is_misprediction(classifier, x_i, y_i) / n
     return error_rate
 
+def SGD(data, labels, C, eta_0, T, update_function):
+    classifier = np.zeros(data.shape[1], dtype='float64')
+    for t in range(1, T+1):
+        index = np.random.randint(1, data.shape[0])
+        x_i, y_i = data[index], labels[index]
+        eta_t = eta_0 / t
+        classifier = update_function(classifier, x_i, y_i, eta_t, C)
+    return classifier
+
 def update_hinge_classifier(classifier, x_i, y_i, eta_t, C):
     classifier *= (1 - eta_t)  # this happens regardless of correctness of prediction
     classifier += is_hinge_miss(classifier, x_i, y_i) * eta_t * C * y_i * x_i
     return classifier
+
+def update_log_classifier(classifier, x_i, y_i, eta_t, C):
+    pass
 
 def is_hinge_miss(classifier, x_i, y_i):
     return y_i * np.dot(classifier, x_i) < 1
@@ -139,6 +151,7 @@ def sign(x):
     return 1 if x >= 0 else -1
 
 
-run_hinge_experiment()
+run_experiment(HINGE)
+# run_experiment(LOG)
 
 #################################
