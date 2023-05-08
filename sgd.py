@@ -8,7 +8,7 @@ import numpy.random
 from sklearn.datasets import fetch_openml
 import sklearn.preprocessing
 import matplotlib.pyplot as plt
-from scipy.special import softmax
+from scipy.special import expit
 
 """
 Please use the provided function signature for the SGD implementation.
@@ -49,7 +49,7 @@ def SGD_hinge(data, labels, C, eta_0, T):
 
 
 
-def SGD_log(data, labels, eta_0, T, norm_mode=False):
+def SGD_log(data, labels, C, eta_0, T, norm_mode=False):
     """
     Implements SGD for log loss.
     """
@@ -101,7 +101,7 @@ def find_best_C(C_range, tr_data, tr_labels, v_data, v_labels, eta_0, T):
     return C_range[np.argmin(error_rates)]
 
 def plot_norm(tr_data, tr_labels, eta_0, T):
-    norm = SGD_log(tr_data, tr_labels, eta_0, T, norm_mode=True)
+    norm = SGD_log(tr_data, tr_labels, None, eta_0, T, norm_mode=True)
     title = "Norm of Classifier $w$ as a Function of SGD Iteration Number"
     graph(title, np.arange(0, T + 1), norm, "Iteration", "Norm of Classifier $w$")
 
@@ -132,7 +132,7 @@ def cross_validate(classifier, v_data, v_labels):
 
 def SGD(data, labels, C, eta_0, T, update_function, norm_mode=False):
     classifier = np.zeros(data.shape[1], dtype='float64')
-    norm = np.zeros(T, dtype='float64') # TODO: implement updates
+    norm = 0 # np.zeros(T, dtype='float64') # TODO: implement updates
     for t in range(1, T+1):
         index = np.random.randint(1, data.shape[0])
         x_i, y_i = data[index], labels[index]
@@ -141,13 +141,15 @@ def SGD(data, labels, C, eta_0, T, update_function, norm_mode=False):
     return classifier if not norm_mode else norm
 
 def update_hinge_classifier(classifier, x_i, y_i, eta_t, C):
+    print(classifier)
+    print(x_i)
     classifier *= (1 - eta_t)  # this happens regardless of correctness of prediction
     classifier += is_hinge_miss(classifier, x_i, y_i) * eta_t * C * y_i * x_i
     return classifier
 
 def update_log_classifier(classifier, x_i, y_i, eta_t, C):
-    # TODO: implement!
-    pass
+    classifier += expit(np.dot(classifier, x_i) * (-y_i)) * x_i * y_i * eta_t
+    return classifier
 
 def is_hinge_miss(classifier, x_i, y_i):
     return y_i * np.dot(classifier, x_i) < 1
@@ -160,7 +162,7 @@ def sign(x):
     return 1 if x >= 0 else -1
 
 
-run_experiment(HINGE)
-# run_experiment(LOG)
+# run_experiment(HINGE)
+run_experiment(LOG)
 
 #################################
